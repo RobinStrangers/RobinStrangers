@@ -25,8 +25,14 @@ export type XVerifyRequest = {
   taskId: XTaskId
 }
 
-function headers(): HeadersInit {
-  return { 'Content-Type': 'application/json', Accept: 'application/json' }
+function headers(extra?: HeadersInit): HeadersInit {
+  return { 'Content-Type': 'application/json', Accept: 'application/json', ...extra }
+}
+
+function supabaseFunctionHeaders(): HeadersInit {
+  const key = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim()
+  if (!key) return headers()
+  return headers({ Authorization: `Bearer ${key}`, apikey: key })
 }
 
 async function readResult(response: Response): Promise<XVerifyResult> {
@@ -41,14 +47,22 @@ async function readResult(response: Response): Promise<XVerifyResult> {
   return payload
 }
 
-async function postVerify(url: string, body: XVerifyRequest): Promise<XVerifyResult | null> {
+function isJsonResponse(response: Response): boolean {
+  return (response.headers.get('content-type') ?? '').includes('application/json')
+}
+
+async function postVerify(
+  url: string,
+  body: XVerifyRequest,
+  requestHeaders: HeadersInit = headers(),
+): Promise<XVerifyResult | null> {
   try {
     const response = await fetch(url, {
       method: 'POST',
-      headers: headers(),
+      headers: requestHeaders,
       body: JSON.stringify(body),
     })
-    if (response.status === 404) return null
+    if (response.status === 404 || !isJsonResponse(response)) return null
     return await readResult(response)
   } catch {
     return null
@@ -66,12 +80,20 @@ async function verifyViaConfiguredUrl(body: XVerifyRequest): Promise<XVerifyResu
 }
 
 async function verifyViaSupabase(body: XVerifyRequest): Promise<XVerifyResult | null> {
+  const base = import.meta.env.VITE_SUPABASE_URL?.trim()
+  if (!base) return null
+  const fromUrl = await postVerify(
+    new URL('/functions/v1/verify-x-task', `${base}/`).toString(),
+    body,
+    supabaseFunctionHeaders(),
+  )
+  if (fromUrl) return fromUrl
+
   if (!isSupabaseConfigured) return null
   try {
-    const { data, error } = await getSupabase().functions.invoke('verify-x-task', { body })
-    if (error || !data) return null
-    const payload = data as XVerifyResult
-    if (typeof payload.verified !== 'boolean') return null
+    const { data } = await getSupabase().functions.invoke('verify-x-task', { body })
+    const payload = data as XVerifyResult | null
+    if (!payload || typeof payload.verified !== 'boolean') return null
     return payload
   } catch {
     return null

@@ -1,6 +1,6 @@
 export const FOLLOW_URL = 'https://x.com/robinstrangers'
-export const LIKE_URL = ''
-export const RETWEET_URL = ''
+export const LIKE_URL = 'https://x.com/robinstrangers/status/2089397230704705862'
+export const RETWEET_URL = 'https://x.com/robinstrangers/status/2089397230704705862'
 
 export type TaskId = 'follow' | 'like' | 'retweet'
 
