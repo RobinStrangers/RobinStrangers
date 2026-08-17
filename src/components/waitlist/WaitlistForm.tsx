@@ -7,15 +7,17 @@ import { Input } from '../ui/Input'
 import { WalletAddressInput } from './WalletAddressInput'
 
 export function WaitlistForm() {
-  const { submitWaitlist, xUsername: savedUsername } = useFlow()
+  const { submitWaitlist, xUsername: savedUsername, completedCount } = useFlow()
   const [address, setAddress] = useState('')
-  const [xUsername, setXUsername] = useState(savedUsername)
+  const [xUsername, setXUsername] = useState('')
   const [attempted, setAttempted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
+  const usernameFromTasks = completedCount > 0 && isValidXUsername(savedUsername)
+  const username = usernameFromTasks ? savedUsername : xUsername
   const addressValid = isValidEvmAddress(normalizeAddress(address))
-  const usernameValid = isValidXUsername(xUsername)
+  const usernameValid = isValidXUsername(username)
   const valid = addressValid && usernameValid
 
   const onSubmit = async (event: FormEvent) => {
@@ -24,7 +26,7 @@ export function WaitlistForm() {
     setError('')
     if (!valid) return
     setSubmitting(true)
-    const result = await submitWaitlist(address, xUsername)
+    const result = await submitWaitlist(address, username)
     setSubmitting(false)
     if (!result.ok) {
       setError(result.error ?? 'Could not join the waitlist.')
@@ -34,24 +36,26 @@ export function WaitlistForm() {
   return (
     <form className="flex flex-col gap-4" onSubmit={onSubmit} noValidate>
       <WalletAddressInput value={address} onChange={setAddress} showError={attempted} />
-      <Input
-        label="USERNAME X"
-        name="x-username"
-        id="x-username"
-        value={xUsername}
-        placeholder="@username"
-        autoComplete="off"
-        spellCheck={false}
-        success={usernameValid}
-        error={
-          attempted && !usernameValid
-            ? 'Enter your X username, 1-15 letters, numbers, or _.'
-            : !xUsername || usernameValid
-              ? undefined
-              : 'Invalid X username.'
-        }
-        onChange={(event) => setXUsername(normalizeXUsername(event.target.value))}
-      />
+      {usernameFromTasks ? null : (
+        <Input
+          label="USERNAME X"
+          name="x-username"
+          id="x-username"
+          value={xUsername}
+          placeholder="@username"
+          autoComplete="off"
+          spellCheck={false}
+          success={usernameValid}
+          error={
+            attempted && !usernameValid
+              ? 'Enter your X username, 1-15 letters, numbers, or _.'
+              : !xUsername || usernameValid
+                ? undefined
+                : 'Invalid X username.'
+          }
+          onChange={(event) => setXUsername(normalizeXUsername(event.target.value))}
+        />
+      )}
       {error ? (
         <p role="alert" className="text-[11px] tracking-wide text-[#FC6224]">
           {error}
