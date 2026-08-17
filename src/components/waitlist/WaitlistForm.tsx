@@ -7,9 +7,9 @@ import { Input } from '../ui/Input'
 import { WalletAddressInput } from './WalletAddressInput'
 
 export function WaitlistForm() {
-  const { submitWaitlist } = useFlow()
+  const { submitWaitlist, xUsername: savedUsername } = useFlow()
   const [address, setAddress] = useState('')
-  const [xUsername, setXUsername] = useState('')
+  const [xUsername, setXUsername] = useState(savedUsername)
   const [attempted, setAttempted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')

@@ -9,6 +9,7 @@ import {
 import type { TaskId } from '../config/socialTasks'
 import { saveWaitlistEntry } from '../lib/waitlist'
 import { isValidEvmAddress, normalizeAddress } from '../lib/wallet'
+import { verifyXTask } from '../lib/xVerify'
 import { isValidXUsername, normalizeXUsername } from '../lib/xUsername'
 
 export const FLOW = {
@@ -32,12 +33,13 @@ type FlowContextValue = {
   tasks: TaskCompletion
   completedCount: number
   enterWorld: () => void
+  setXUsername: (value: string) => void
   submitWaitlist: (
     address: string,
     xUsername: string,
   ) => Promise<{ ok: boolean; error?: string }>
   advanceFromSuccess: () => void
-  completeTask: (id: TaskId) => void
+  verifyTask: (id: TaskId) => Promise<{ ok: boolean; error?: string }>
 }
 
 const EMPTY_TASKS: TaskCompletion = {
@@ -58,6 +60,40 @@ export function FlowProvider({ children }: { children: ReactNode }) {
     setState(FLOW.TASK_1)
   }, [])
 
+  const updateXUsername = useCallback((value: string) => {
+    setXUsername(normalizeXUsername(value))
+  }, [])
+
+  const markTaskComplete = useCallback((id: TaskId, nextState?: FlowState) => {
+    setTasks((current) => {
+      if (current[id]) return current
+      return { ...current, [id]: true }
+    })
+    setState((current) => {
+      if (nextState) return nextState
+      if (id === 'follow' && current === FLOW.TASK_1) return FLOW.TASK_2
+      if (id === 'like' && current === FLOW.TASK_2) return FLOW.TASK_3
+      if (id === 'retweet' && current === FLOW.TASK_3) return FLOW.WAITLIST
+      return current
+    })
+  }, [])
+
+  const verifyTask = useCallback(async (id: TaskId) => {
+    const username = normalizeXUsername(xUsername)
+    if (!isValidXUsername(username)) {
+      return { ok: false, error: 'Enter your X username to verify this task.' }
+    }
+
+    const result = await verifyXTask({ username, taskId: id })
+    if (!result.verified) {
+      return { ok: false, error: result.error ?? 'Verification rejected.' }
+    }
+
+    const skipRemaining = id === 'follow' && !result.target?.tweetId
+    markTaskComplete(id, skipRemaining ? FLOW.WAITLIST : undefined)
+    return { ok: true }
+  }, [markTaskComplete, xUsername])
+
   const submitWaitlist = useCallback(async (address: string, username: string) => {
     const nextAddress = normalizeAddress(address)
     const nextUsername = normalizeXUsername(username)
@@ -68,10 +104,15 @@ export function FlowProvider({ children }: { children: ReactNode }) {
       return { ok: false, error: 'Enter a valid X username.' }
     }
 
+    const verified = await verifyXTask({ username: nextUsername, taskId: 'all' })
+    if (!verified.verified) {
+      return { ok: false, error: verified.error ?? 'X verification was rejected.' }
+    }
+
     const saved = await saveWaitlistEntry({
       walletAddress: nextAddress,
       xUsername: nextUsername,
-      followed: tasks.follow,
+      followed: true,
     })
     if (!saved.ok) return saved
 
@@ -79,23 +120,10 @@ export function FlowProvider({ children }: { children: ReactNode }) {
     setXUsername(nextUsername)
     setState(FLOW.COMPLETED)
     return { ok: true }
-  }, [tasks.follow])
+  }, [])
 
   const advanceFromSuccess = useCallback(() => {
     setState((current) => (current === FLOW.WAITLIST_SUCCESS ? FLOW.COMPLETED : current))
-  }, [])
-
-  const completeTask = useCallback((id: TaskId) => {
-    setTasks((current) => {
-      if (current[id]) return current
-      return { ...current, [id]: true }
-    })
-    setState((current) => {
-      if (id === 'follow' && current === FLOW.TASK_1) return FLOW.TASK_2
-      if (id === 'like' && current === FLOW.TASK_2) return FLOW.TASK_3
-      if (id === 'retweet' && current === FLOW.TASK_3) return FLOW.WAITLIST
-      return current
-    })
   }, [])
 
   const completedCount = Number(tasks.follow) + Number(tasks.like) + Number(tasks.retweet)
@@ -108,9 +136,10 @@ export function FlowProvider({ children }: { children: ReactNode }) {
       tasks,
       completedCount,
       enterWorld,
+      setXUsername: updateXUsername,
       submitWaitlist,
       advanceFromSuccess,
-      completeTask,
+      verifyTask,
     }),
     [
       state,
@@ -119,9 +148,10 @@ export function FlowProvider({ children }: { children: ReactNode }) {
       tasks,
       completedCount,
       enterWorld,
+      updateXUsername,
       submitWaitlist,
       advanceFromSuccess,
-      completeTask,
+      verifyTask,
     ],
   )
 

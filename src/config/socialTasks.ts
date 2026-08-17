@@ -37,12 +37,28 @@ export const SOCIAL_TASKS: SocialTask[] = [
     id: 'retweet',
     number: '03',
     title: 'RETWEET POST',
-    description: 'Retweet the latest Strangers post on X',
+    description: 'Retweet the latest Strangers post on X.',
     cta: 'RETWEET',
     url: RETWEET_URL,
     available: true,
   },
 ]
+
+export function extractXHandle(url: string): string {
+  const match = url
+    .trim()
+    .match(/(?:x\.com|twitter\.com)\/(?:intent\/(?:user|follow)\?screen_name=)?@?([A-Za-z0-9_]+)/i)
+  if (!match) return ''
+  const handle = match[1]
+  const reserved = new Set(['intent', 'i', 'home', 'explore', 'search', 'share', 'hashtag', 'compose'])
+  return reserved.has(handle.toLowerCase()) ? '' : handle
+}
+
+export function extractTweetId(url: string): string {
+  return url.trim().match(/status(?:es)?\/(\d+)/i)?.[1] ?? url.trim().match(/tweet_id=(\d+)/i)?.[1] ?? ''
+}
+
+export const X_TARGET_HANDLE = extractXHandle(FOLLOW_URL) || 'robinstrangers'
 
 export function getTaskUrl(task: SocialTask): string {
   return task.url.trim()
