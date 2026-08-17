@@ -64,13 +64,12 @@ export function FlowProvider({ children }: { children: ReactNode }) {
     setXUsername(normalizeXUsername(value))
   }, [])
 
-  const markTaskComplete = useCallback((id: TaskId, nextState?: FlowState) => {
+  const markTaskComplete = useCallback((id: TaskId) => {
     setTasks((current) => {
       if (current[id]) return current
       return { ...current, [id]: true }
     })
     setState((current) => {
-      if (nextState) return nextState
       if (id === 'follow' && current === FLOW.TASK_1) return FLOW.TASK_2
       if (id === 'like' && current === FLOW.TASK_2) return FLOW.TASK_3
       if (id === 'retweet' && current === FLOW.TASK_3) return FLOW.WAITLIST
@@ -89,8 +88,7 @@ export function FlowProvider({ children }: { children: ReactNode }) {
       return { ok: false, error: result.error ?? 'Verification rejected.' }
     }
 
-    const skipRemaining = id === 'follow' && !result.target?.tweetId
-    markTaskComplete(id, skipRemaining ? FLOW.WAITLIST : undefined)
+    markTaskComplete(id)
     return { ok: true }
   }, [markTaskComplete, xUsername])
 

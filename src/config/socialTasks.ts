@@ -11,7 +11,6 @@ export type SocialTask = {
   description: string
   cta: string
   url: string
-  available: boolean
 }
 
 export const SOCIAL_TASKS: SocialTask[] = [
@@ -22,7 +21,6 @@ export const SOCIAL_TASKS: SocialTask[] = [
     description: 'Follow Strangers on X',
     cta: 'FOLLOW',
     url: FOLLOW_URL,
-    available: true,
   },
   {
     id: 'like',
@@ -31,7 +29,6 @@ export const SOCIAL_TASKS: SocialTask[] = [
     description: 'Like the latest Strangers post on X',
     cta: 'LIKE',
     url: LIKE_URL,
-    available: true,
   },
   {
     id: 'retweet',
@@ -40,7 +37,6 @@ export const SOCIAL_TASKS: SocialTask[] = [
     description: 'Retweet the latest Strangers post on X.',
     cta: 'RETWEET',
     url: RETWEET_URL,
-    available: true,
   },
 ]
 
@@ -62,8 +58,4 @@ export const X_TARGET_HANDLE = extractXHandle(FOLLOW_URL) || 'robinstrangers'
 
 export function getTaskUrl(task: SocialTask): string {
   return task.url.trim()
-}
-
-export function isTaskAvailable(task: SocialTask): boolean {
-  return task.available
 }

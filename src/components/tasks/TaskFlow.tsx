@@ -50,20 +50,17 @@ export function TaskFlow() {
         onChange={(event) => setXUsername(normalizeXUsername(event.target.value))}
       />
       <div className="flex flex-col gap-3">
-        {SOCIAL_TASKS.map((task) => {
-          const available = task.id === 'follow' || Boolean(targets?.tweetId || task.url.trim())
-          return (
-            <TaskItem
-              key={task.id}
-              task={{ ...task, available }}
-              completed={tasks[task.id]}
-              current={isCurrent(task.id)}
-              locked={!isUnlocked(task.id) && !tasks[task.id]}
-              actionUrl={actionUrl(task.id)}
-              onVerify={() => verifyTask(task.id)}
-            />
-          )
-        })}
+        {SOCIAL_TASKS.map((task) => (
+          <TaskItem
+            key={task.id}
+            task={task}
+            completed={tasks[task.id]}
+            current={isCurrent(task.id)}
+            locked={!isUnlocked(task.id) && !tasks[task.id]}
+            actionUrl={actionUrl(task.id)}
+            onVerify={() => verifyTask(task.id)}
+          />
+        ))}
       </div>
     </div>
   )

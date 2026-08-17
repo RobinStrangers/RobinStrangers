@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { SocialTask } from '../../config/socialTasks'
-import { getTaskUrl, isTaskAvailable } from '../../config/socialTasks'
+import { getTaskUrl } from '../../config/socialTasks'
 import { Button } from '../ui/Button'
 
 type TaskItemProps = {
@@ -23,7 +23,6 @@ export function TaskItem({
   const [opened, setOpened] = useState(false)
   const [verifying, setVerifying] = useState(false)
   const [error, setError] = useState('')
-  const available = isTaskAvailable(task)
 
   const openAction = () => {
     const url = (actionUrl ?? getTaskUrl(task)).trim()
@@ -43,21 +42,6 @@ export function TaskItem({
     if (!result.ok) {
       setError(result.error ?? 'Verification rejected.')
     }
-  }
-
-  if (!available && !completed) {
-    return (
-      <article className="task-item task-item-compact is-locked">
-        <div className="flex items-center justify-between gap-3">
-          <p className="font-mono text-[10px] tracking-[0.2em] text-[#FC6224]">
-            {task.number}  {task.title}
-          </p>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#FC6224]/70">
-            COMING SOON
-          </p>
-        </div>
-      </article>
-    )
   }
 
   if (!current) {
