@@ -1,6 +1,2 @@
-{
-  "functions": {
-    "api/verify-x.ts": { "maxDuration": 15 },
-    "api/x-targets.ts": { "maxDuration": 15 }
-  }
-}
+{}
+

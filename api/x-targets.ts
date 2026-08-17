@@ -1,30 +1,39 @@
-import { siteXVerifyConfig } from '../server/xVerifyConfig.ts'
-import { resolveXTarget } from '../supabase/functions/_shared/xTaskVerifier.ts'
+import { defaultXVerifyConfig, resolveXTarget } from '../supabase/functions/_shared/xTaskVerifier.ts'
+import { FOLLOW_URL, LIKE_URL, RETWEET_URL } from '../src/config/socialTasks.ts'
 
-export const config = { maxDuration: 15 }
-
-const cors = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Cache-Control': 'no-store',
+const config = {
+  ...defaultXVerifyConfig(),
+  followUrl: FOLLOW_URL,
+  likeUrl: LIKE_URL,
+  retweetUrl: RETWEET_URL,
 }
 
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...cors, 'Content-Type': 'application/json; charset=utf-8' },
-  })
+function send(res: { statusCode: number; setHeader: (k: string, v: string) => void; end: (b?: string) => void }, status: number, body: unknown) {
+  res.statusCode = status
+  res.setHeader('Content-Type', 'application/json; charset=utf-8')
+  res.setHeader('Cache-Control', 'no-store')
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  res.end(JSON.stringify(body))
 }
 
-export function OPTIONS(): Response {
-  return new Response(null, { status: 204, headers: cors })
-}
+export default async function handler(
+  req: { method?: string },
+  res: { statusCode: number; setHeader: (k: string, v: string) => void; end: (b?: string) => void },
+) {
+  if (req.method === 'OPTIONS') {
+    send(res, 204, {})
+    return
+  }
+  if (req.method !== 'GET') {
+    send(res, 405, { error: 'Method not allowed.' })
+    return
+  }
 
-export async function GET(): Promise<Response> {
   try {
-    return json(await resolveXTarget(siteXVerifyConfig()))
+    send(res, 200, await resolveXTarget(config))
   } catch {
-    return json({ error: 'Could not resolve X targets.' }, 500)
+    send(res, 500, { error: 'Could not resolve X targets.' })
   }
 }
