@@ -28,26 +28,26 @@ export const SOCIAL_TASKS: SocialTask[] = [
     id: 'like',
     number: '02',
     title: 'LIKE POST',
-    description: 'A post is not live yet',
+    description: 'Like the latest Strangers post on X',
     cta: 'LIKE',
     url: LIKE_URL,
-    available: false,
+    available: true,
   },
   {
     id: 'retweet',
     number: '03',
     title: 'RETWEET POST',
-    description: 'A post is not live yet',
+    description: 'Retweet the latest Strangers post on X',
     cta: 'RETWEET',
     url: RETWEET_URL,
-    available: false,
+    available: true,
   },
 ]
 
 export function getTaskUrl(task: SocialTask): string {
-  return task.url
+  return task.url.trim()
 }
 
 export function isTaskAvailable(task: SocialTask): boolean {
-  return task.available && Boolean(task.url)
+  return task.available
 }

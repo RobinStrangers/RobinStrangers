@@ -24,9 +24,16 @@ export type CharacterRig = {
   face: FaceRig
 }
 
+export type IsolatedStill = {
+  url: string
+  width: number
+  height: number
+}
+
 const sheetCache = new Map<string, Promise<WalkSheet>>()
 const rigCache = new Map<string, Promise<CharacterRig>>()
 const imageCache = new Map<string, Promise<HTMLImageElement>>()
+const stillCache = new Map<string, Promise<IsolatedStill>>()
 
 export function preloadImage(src: string): Promise<HTMLImageElement> {
   const cached = imageCache.get(src)
@@ -60,6 +67,37 @@ export function preloadCharacterRig(src: string): Promise<CharacterRig> {
   const promise = buildCharacterRig(src)
   rigCache.set(src, promise)
   return promise
+}
+
+export function preloadIsolatedStill(src: string): Promise<IsolatedStill> {
+  const cached = stillCache.get(src)
+  if (cached) return cached
+
+  const promise = preloadImage(src).then((image) => {
+    const isolated = isolateCharacter(image)
+    attachNeck(isolated)
+    return cropStill(isolated)
+  })
+
+  stillCache.set(src, promise)
+  return promise
+}
+
+function cropStill(source: HTMLCanvasElement): IsolatedStill {
+  const bounds = contentBounds(source)
+  const pad = 6
+  const sx = Math.max(0, bounds.minX - pad)
+  const sy = Math.max(0, bounds.minY - pad)
+  const width = Math.min(source.width - sx, bounds.maxX - bounds.minX + 1 + pad * 2)
+  const height = Math.min(source.height - sy, bounds.maxY - bounds.minY + 1 + pad * 2)
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  const ctx = canvas.getContext('2d')
+  if (!ctx) throw new Error('Canvas unavailable')
+  ctx.imageSmoothingEnabled = false
+  ctx.drawImage(source, sx, sy, width, height, 0, 0, width, height)
+  return { url: canvas.toDataURL('image/png'), width, height }
 }
 
 function sheetFromFrames(frames: HTMLCanvasElement[]): WalkSheet {
@@ -478,39 +516,49 @@ function eraseHead(source: HTMLCanvasElement, neckY: number) {
 
 type Bounds = ReturnType<typeof contentBounds>
 
-type EyeBox = { minX: number; minY: number; maxX: number; maxY: number }
+type EyeKind = 'open' | 'closed' | 'shade'
+
+type EyeSpec = {
+  kind: EyeKind
+  x: number
+  y: number
+  w: number
+  h: number
+  lidY?: number
+  lidH?: number
+}
 
 const PIXEL = 10
 
-const CHARACTER_EYES: Record<string, { left: EyeBox; right: EyeBox }> = {
-  character_0014: {
-    left: { minX: 120, minY: 140, maxX: 139, maxY: 169 },
-    right: { minX: 170, minY: 150, maxX: 199, maxY: 159 },
-  },
-  character_0016: {
-    left: { minX: 110, minY: 130, maxX: 159, maxY: 159 },
-    right: { minX: 170, minY: 130, maxX: 219, maxY: 159 },
-  },
-  character_0018: {
-    left: { minX: 120, minY: 140, maxX: 139, maxY: 169 },
-    right: { minX: 180, minY: 140, maxX: 199, maxY: 169 },
-  },
-  character_0022: {
-    left: { minX: 100, minY: 140, maxX: 139, maxY: 169 },
-    right: { minX: 160, minY: 140, maxX: 199, maxY: 169 },
-  },
-  character_0023: {
-    left: { minX: 120, minY: 140, maxX: 139, maxY: 169 },
-    right: { minX: 170, minY: 150, maxX: 199, maxY: 159 },
-  },
-  character_0024: {
-    left: { minX: 110, minY: 140, maxX: 139, maxY: 159 },
-    right: { minX: 170, minY: 140, maxX: 199, maxY: 159 },
-  },
-  character_0026: {
-    left: { minX: 120, minY: 140, maxX: 139, maxY: 169 },
-    right: { minX: 170, minY: 150, maxX: 199, maxY: 159 },
-  },
+const CHARACTER_EYES: Record<string, EyeSpec[]> = {
+  character_0014: [
+    { kind: 'open', x: 120, y: 140, w: 20, h: 30, lidY: 150, lidH: 10 },
+    { kind: 'closed', x: 170, y: 150, w: 30, h: 10 },
+  ],
+  character_0016: [
+    { kind: 'shade', x: 110, y: 130, w: 50, h: 30 },
+    { kind: 'shade', x: 170, y: 130, w: 50, h: 30 },
+  ],
+  character_0018: [
+    { kind: 'open', x: 120, y: 140, w: 20, h: 30, lidY: 150, lidH: 10 },
+    { kind: 'open', x: 180, y: 140, w: 20, h: 30, lidY: 150, lidH: 10 },
+  ],
+  character_0022: [
+    { kind: 'open', x: 100, y: 140, w: 40, h: 30, lidY: 150, lidH: 10 },
+    { kind: 'open', x: 160, y: 140, w: 40, h: 30, lidY: 150, lidH: 10 },
+  ],
+  character_0023: [
+    { kind: 'open', x: 120, y: 140, w: 20, h: 30, lidY: 150, lidH: 10 },
+    { kind: 'closed', x: 170, y: 150, w: 30, h: 10 },
+  ],
+  character_0024: [
+    { kind: 'closed', x: 110, y: 140, w: 30, h: 20 },
+    { kind: 'closed', x: 170, y: 140, w: 30, h: 20 },
+  ],
+  character_0026: [
+    { kind: 'open', x: 120, y: 140, w: 20, h: 30, lidY: 150, lidH: 10 },
+    { kind: 'closed', x: 170, y: 150, w: 30, h: 10 },
+  ],
 }
 
 function characterKey(src: string) {
@@ -567,19 +615,30 @@ function snapPixel(value: number) {
   return Math.round(value / PIXEL) * PIXEL
 }
 
-function boxFromCells(cells: Array<{ x: number; y: number }>, fallback: EyeBox): EyeBox {
-  if (!cells.length) return fallback
+function specFromCells(cells: Array<{ x: number; y: number }>): EyeSpec | null {
+  if (!cells.length) return null
   let minX = cells[0].x
   let minY = cells[0].y
-  let maxX = cells[0].x + PIXEL - 1
-  let maxY = cells[0].y + PIXEL - 1
+  let maxX = cells[0].x
+  let maxY = cells[0].y
   for (const cell of cells) {
     if (cell.x < minX) minX = cell.x
     if (cell.y < minY) minY = cell.y
-    if (cell.x + PIXEL - 1 > maxX) maxX = cell.x + PIXEL - 1
-    if (cell.y + PIXEL - 1 > maxY) maxY = cell.y + PIXEL - 1
+    if (cell.x > maxX) maxX = cell.x
+    if (cell.y > maxY) maxY = cell.y
   }
-  return { minX, minY, maxX, maxY }
+  const w = maxX - minX + PIXEL
+  const h = maxY - minY + PIXEL
+  if (h <= PIXEL) return { kind: 'closed', x: minX, y: minY, w, h }
+  return {
+    kind: 'open',
+    x: minX,
+    y: minY,
+    w,
+    h,
+    lidY: minY + snapPixel((h - PIXEL) / 2),
+    lidH: PIXEL,
+  }
 }
 
 function isBlushTone(r: number, g: number, b: number) {
@@ -620,7 +679,7 @@ function cellMajority(
   }
 }
 
-function findEyes(source: HTMLCanvasElement, bounds: Bounds): EyeBox[] {
+function findEyes(source: HTMLCanvasElement, bounds: Bounds): EyeSpec[] {
   const ctx = source.getContext('2d', { willReadFrequently: true })
   if (!ctx) return []
   const { data, width } = ctx.getImageData(0, 0, source.width, source.height)
@@ -646,33 +705,36 @@ function findEyes(source: HTMLCanvasElement, bounds: Bounds): EyeBox[] {
     }
   }
 
-  const leftFallback: EyeBox = {
-    minX: midX - PIXEL * 4,
-    maxX: midX - PIXEL * 2 - 1,
-    minY: 140,
-    maxY: 169,
+  const eyes = [specFromCells(leftCells), specFromCells(rightCells)].filter(
+    (eye): eye is EyeSpec => Boolean(eye),
+  )
+  if (
+    eyes.length === 2 &&
+    eyes[0].w >= PIXEL * 4 &&
+    eyes[1].w >= PIXEL * 4 &&
+    Math.abs(eyes[0].y - eyes[1].y) <= PIXEL &&
+    eyes[1].x - (eyes[0].x + eyes[0].w) <= PIXEL * 2
+  ) {
+    return eyes.map((eye) => ({ ...eye, kind: 'shade' as const }))
   }
-  const rightFallback: EyeBox = {
-    minX: midX + PIXEL * 2,
-    maxX: midX + PIXEL * 4 - 1,
-    minY: 140,
-    maxY: 169,
-  }
-
-  return [boxFromCells(leftCells, leftFallback), boxFromCells(rightCells, rightFallback)]
+  return eyes
 }
 
-function applyBlink(ctx: CanvasRenderingContext2D, eyes: EyeBox[], skin: string) {
+function applyBlink(ctx: CanvasRenderingContext2D, source: HTMLCanvasElement, eyes: EyeSpec[]) {
   for (const eye of eyes) {
-    const x = snapPixel(eye.minX)
-    const y = snapPixel(eye.minY)
-    const w = Math.max(PIXEL, snapPixel(eye.maxX - eye.minX + 1))
-    const h = Math.max(PIXEL, snapPixel(eye.maxY - eye.minY + 1))
-    ctx.fillStyle = skin
-    ctx.fillRect(x, y, w, h)
-    const lidY = y + snapPixel((h - PIXEL) / 2)
-    ctx.fillStyle = '#141414'
-    ctx.fillRect(x, lidY, w, PIXEL)
+    if (eye.kind !== 'open') continue
+
+    const sampleY = Math.max(0, eye.y - PIXEL)
+    for (let yy = eye.y; yy < eye.y + eye.h; yy += PIXEL) {
+      for (let xx = eye.x; xx < eye.x + eye.w; xx += PIXEL) {
+        ctx.drawImage(source, xx, sampleY, PIXEL, PIXEL, xx, yy, PIXEL, PIXEL)
+      }
+    }
+
+    const lidY = eye.lidY ?? eye.y + snapPixel((eye.h - PIXEL) / 2)
+    const lidH = eye.lidH ?? PIXEL
+    ctx.fillStyle = '#141418'
+    ctx.fillRect(eye.x, lidY, eye.w, lidH)
   }
 }
 
@@ -686,11 +748,7 @@ function makeFaceRig(
 ): FaceRig {
   const padX = 12
   const height = padTop + neckY + 6
-  const skin = sampleSkin(source, { ...bounds, maxY: neckY })
-  const mapped = CHARACTER_EYES[characterKey(src)]
-  const eyes = mapped
-    ? [mapped.left, mapped.right]
-    : findEyes(source, { ...bounds, maxY: neckY })
+  const eyes = CHARACTER_EYES[characterKey(src)] ?? findEyes(source, { ...bounds, maxY: neckY })
 
   const drawFace = (lookX: number, blink: boolean) => {
     const canvas = document.createElement('canvas')
@@ -713,7 +771,7 @@ function makeFaceRig(
     if (blink) {
       ctx.save()
       ctx.translate(padX + lookX, padTop)
-      applyBlink(ctx, eyes, skin)
+      applyBlink(ctx, source, eyes)
       ctx.restore()
     }
     return canvas.toDataURL('image/png')

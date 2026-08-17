@@ -1,5 +1,5 @@
 import { forwardRef, type CSSProperties, type ReactNode } from 'react'
-import { DEPTH, type DepthLevel } from '../../config/constants'
+import { DEPTH, walkTransform, type DepthLevel } from '../../config/constants'
 
 type CharacterMovementProps = {
   depth: DepthLevel
@@ -15,7 +15,7 @@ export const CharacterMovement = forwardRef<HTMLDivElement, CharacterMovementPro
       left: 0,
       bottom: `var(--ground-${depth}, ${profile.ground})`,
       zIndex: profile.z,
-      transform: `translate3d(-20vw, 0, 0) scale(${profile.scale})`,
+      transform: walkTransform(-20, profile.scale, profile.scale),
       transformOrigin: '50% 100%',
       opacity: 0,
       willChange: 'transform, opacity',

@@ -91,7 +91,7 @@ export function FlowProvider({ children }: { children: ReactNode }) {
       return { ...current, [id]: true }
     })
     setState((current) => {
-      if (id === 'follow' && current === FLOW.TASK_1) return FLOW.WAITLIST
+      if (id === 'follow' && current === FLOW.TASK_1) return FLOW.TASK_2
       if (id === 'like' && current === FLOW.TASK_2) return FLOW.TASK_3
       if (id === 'retweet' && current === FLOW.TASK_3) return FLOW.WAITLIST
       return current

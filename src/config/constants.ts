@@ -24,6 +24,10 @@ export const MOVEMENT = {
   TRAVEL: 1.65,
 } as const
 
+export function walkTransform(xVw: number, scaleX: number, scaleY: number) {
+  return `translate3d(calc(${xVw}vw - 50%), 0, 0) scale(${scaleX}, ${scaleY})`
+}
+
 export const DEPTH = {
   background: {
     scale: 0.16,

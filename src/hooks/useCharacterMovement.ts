@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type RefObject } from 'react'
-import { DEPTH, MOVEMENT, type DepthLevel } from '../config/constants'
+import { DEPTH, MOVEMENT, walkTransform, type DepthLevel } from '../config/constants'
 import { useReducedMotion } from './useReducedMotion'
 
 type MovementOptions = {
@@ -59,7 +59,7 @@ export function useCharacterMovement({
       const node = nodeRef.current
       if (!node) return
       const scale = profile.scale * (window.innerWidth < 768 ? 0.78 : 1)
-      node.style.transform = `translate3d(${x}vw, 0, 0) scale(${nextDirection * scale}, ${scale})`
+      node.style.transform = walkTransform(x, nextDirection * scale, scale)
       node.style.opacity = visible ? '1' : '0'
     }
 

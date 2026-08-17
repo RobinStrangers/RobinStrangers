@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react'
-import { STRANGER_IMAGE_LIST } from '../../assets/strangers'
+import { STRANGER_IMAGES } from '../../assets/strangers'
 import { useReducedMotion } from '../../hooks/useReducedMotion'
 import { preloadWalkSheet, type WalkSheet } from '../../lib/createWalkFrames'
 import { preloadStrangerAssets } from '../../lib/preloadImages'
+import { LoaderCity } from './LoaderCity'
 
-const WORD = 'STRANGERS'
+const WORD = 'strangers'
+
 const WALKERS = [
-  { src: STRANGER_IMAGE_LIST[1], delay: '0.1s', duration: '2.15s', bottom: '10%', scale: 0.2, dir: 1 },
-  { src: STRANGER_IMAGE_LIST[3], delay: '0.7s', duration: '2s', bottom: '6%', scale: 0.24, dir: -1 },
-  { src: STRANGER_IMAGE_LIST[6], delay: '1.2s', duration: '2.25s', bottom: '14%', scale: 0.16, dir: 1 },
-  { src: STRANGER_IMAGE_LIST[0], delay: '1.8s', duration: '1.9s', bottom: '4%', scale: 0.28, dir: 1 },
+  { src: STRANGER_IMAGES.character_0014, dir: 1, delay: '0.95s', duration: '2.55s', bottom: '6%', scale: 0.26 },
+  { src: STRANGER_IMAGES.character_0022, dir: -1, delay: '1.4s', duration: '2.35s', bottom: '4%', scale: 0.32 },
+  { src: STRANGER_IMAGES.character_0026, dir: 1, delay: '1.85s', duration: '2.45s', bottom: '8%', scale: 0.22, extra: true },
 ]
 
 type SiteLoaderProps = {
@@ -24,14 +25,16 @@ export function SiteLoader({ onFinished }: SiteLoaderProps) {
   useEffect(() => {
     let active = true
     WALKERS.forEach((walker, index) => {
-      void preloadWalkSheet(walker.src).then((sheet) => {
-        if (!active) return
-        setSheets((current) => {
-          const next = [...current]
-          next[index] = sheet
-          return next
+      void preloadWalkSheet(walker.src)
+        .then((sheet) => {
+          if (!active) return
+          setSheets((current) => {
+            const next = [...current]
+            next[index] = sheet
+            return next
+          })
         })
-      })
+        .catch(() => undefined)
     })
     return () => {
       active = false
@@ -57,7 +60,7 @@ export function SiteLoader({ onFinished }: SiteLoaderProps) {
         finish()
       })
 
-    const sequenceMs = reduced ? 700 : 5200
+    const sequenceMs = reduced ? 700 : 4200
     const sequenceTimer = window.setTimeout(() => {
       sequenceDone = true
       finish()
@@ -80,11 +83,18 @@ export function SiteLoader({ onFinished }: SiteLoaderProps) {
       <div className="loader-shutter top" />
       <div className="loader-shutter bottom" />
       <div className="loader-stage">
-        <div className="loader-embers" aria-hidden="true">
-          {Array.from({ length: 28 }, (_, index) => (
-            <span key={index} className={`loader-ember e-${index + 1}`} />
+        <LoaderCity />
+        <p className="loader-word" aria-label="strangers">
+          {WORD.split('').map((letter, index) => (
+            <span
+              key={`${letter}-${index}`}
+              className="loader-letter"
+              style={{ animationDelay: reduced ? '0ms' : `${180 + index * 48}ms` }}
+            >
+              {letter}
+            </span>
           ))}
-        </div>
+        </p>
         {!reduced
           ? WALKERS.map((walker, index) => {
               const sheet = sheets[index]
@@ -92,7 +102,7 @@ export function SiteLoader({ onFinished }: SiteLoaderProps) {
               return (
                 <div
                   key={walker.src}
-                  className={`loader-walker ${walker.dir < 0 ? 'goes-left' : 'goes-right'}`}
+                  className={`loader-walker ${walker.dir < 0 ? 'goes-left' : 'goes-right'}${'extra' in walker && walker.extra ? ' is-extra' : ''}`}
                   style={{
                     bottom: walker.bottom,
                     animationDelay: walker.delay,
@@ -115,17 +125,6 @@ export function SiteLoader({ onFinished }: SiteLoaderProps) {
               )
             })
           : null}
-        <p className="loader-word" aria-label="STRANGERS">
-          {WORD.split('').map((letter, index) => (
-            <span
-              key={`${letter}-${index}`}
-              className="loader-letter"
-              style={{ animationDelay: reduced ? `${index * 40}ms` : `${480 + index * 260}ms` }}
-            >
-              {letter}
-            </span>
-          ))}
-        </p>
       </div>
     </div>
   )
