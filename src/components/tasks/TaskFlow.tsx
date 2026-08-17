@@ -1,7 +1,5 @@
-import { useEffect, useState } from 'react'
-import { SOCIAL_TASKS } from '../../config/socialTasks'
+import { SOCIAL_TASKS, getTaskUrl } from '../../config/socialTasks'
 import { useTaskProgress } from '../../hooks/useTaskProgress'
-import { resolveXTargets, type XVerifyTarget } from '../../lib/xVerify'
 import { isValidXUsername, normalizeXUsername } from '../../lib/xUsername'
 import { useFlow } from '../../state/FlowContext'
 import { Input } from '../ui/Input'
@@ -11,25 +9,8 @@ import { TaskProgress } from './TaskProgress'
 export function TaskFlow() {
   const { tasks, completedCount, total, verifyTask, isUnlocked, isCurrent } = useTaskProgress()
   const { xUsername, setXUsername } = useFlow()
-  const [targets, setTargets] = useState<XVerifyTarget | null>(null)
-
-  useEffect(() => {
-    let active = true
-    void resolveXTargets().then((next) => {
-      if (active && next) setTargets(next)
-    })
-    return () => {
-      active = false
-    }
-  }, [])
 
   const usernameValid = isValidXUsername(xUsername)
-  const actionUrl = (id: (typeof SOCIAL_TASKS)[number]['id']) => {
-    if (!targets) return undefined
-    if (id === 'follow') return targets.followUrl
-    if (id === 'like') return targets.likeUrl
-    return targets.retweetUrl
-  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -57,7 +38,7 @@ export function TaskFlow() {
             completed={tasks[task.id]}
             current={isCurrent(task.id)}
             locked={!isUnlocked(task.id) && !tasks[task.id]}
-            actionUrl={actionUrl(task.id)}
+            actionUrl={getTaskUrl(task)}
             onVerify={() => verifyTask(task.id)}
           />
         ))}

@@ -9,7 +9,6 @@ import {
 import type { TaskId } from '../config/socialTasks'
 import { saveWaitlistEntry } from '../lib/waitlist'
 import { isValidEvmAddress, normalizeAddress } from '../lib/wallet'
-import { verifyXTask } from '../lib/xVerify'
 import { isValidXUsername, normalizeXUsername } from '../lib/xUsername'
 
 export const FLOW = {
@@ -78,19 +77,9 @@ export function FlowProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const verifyTask = useCallback(async (id: TaskId) => {
-    const username = normalizeXUsername(xUsername)
-    if (!isValidXUsername(username)) {
-      return { ok: false, error: 'Enter your X username to verify this task.' }
-    }
-
-    const result = await verifyXTask({ username, taskId: id })
-    if (!result.verified) {
-      return { ok: false, error: result.error ?? 'Verification rejected.' }
-    }
-
     markTaskComplete(id)
     return { ok: true }
-  }, [markTaskComplete, xUsername])
+  }, [markTaskComplete])
 
   const submitWaitlist = useCallback(async (address: string, username: string) => {
     const nextAddress = normalizeAddress(address)
@@ -100,11 +89,6 @@ export function FlowProvider({ children }: { children: ReactNode }) {
     }
     if (!isValidXUsername(nextUsername)) {
       return { ok: false, error: 'Enter a valid X username.' }
-    }
-
-    const verified = await verifyXTask({ username: nextUsername, taskId: 'all' })
-    if (!verified.verified) {
-      return { ok: false, error: verified.error ?? 'X verification was rejected.' }
     }
 
     const saved = await saveWaitlistEntry({

@@ -21,8 +21,6 @@ export function TaskItem({
   onVerify,
 }: TaskItemProps) {
   const [opened, setOpened] = useState(false)
-  const [verifying, setVerifying] = useState(false)
-  const [error, setError] = useState('')
 
   const openAction = () => {
     const url = (actionUrl ?? getTaskUrl(task)).trim()
@@ -30,18 +28,10 @@ export function TaskItem({
       window.open(url, '_blank', 'noopener,noreferrer')
     }
     setOpened(true)
-    setError('')
   }
 
-  const verifyAction = async () => {
-    if (verifying) return
-    setVerifying(true)
-    setError('')
-    const result = await onVerify()
-    setVerifying(false)
-    if (!result.ok) {
-      setError(result.error ?? 'Verification rejected.')
-    }
+  const verifyAction = () => {
+    void onVerify()
   }
 
   if (!current) {
@@ -65,7 +55,7 @@ export function TaskItem({
 
   return (
     <article
-      className={`task-item ${current ? 'is-current' : ''} ${completed ? 'is-complete' : ''} ${locked ? 'is-locked' : ''} ${error ? 'is-rejected' : ''}`}
+      className={`task-item ${current ? 'is-current' : ''} ${completed ? 'is-complete' : ''} ${locked ? 'is-locked' : ''}`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -83,27 +73,17 @@ export function TaskItem({
         </div>
         {!completed && current ? (
           <div className="flex shrink-0 flex-col items-end gap-2">
-            <Button variant="task" onClick={openAction} disabled={verifying}>
+            <Button variant="task" onClick={openAction}>
               {task.cta}
             </Button>
             {opened ? (
-              <Button
-                variant="ghost"
-                className="!px-3 !py-1.5 !text-[10px]"
-                onClick={() => void verifyAction()}
-                disabled={verifying}
-              >
-                {verifying ? 'CHECKING' : error ? 'RETRY' : 'VERIFY'}
+              <Button variant="ghost" className="!px-3 !py-1.5 !text-[10px]" onClick={verifyAction}>
+                VERIFY
               </Button>
             ) : null}
           </div>
         ) : null}
       </div>
-      {error && current && !completed ? (
-        <p role="alert" className="task-verify-error mt-3 text-[11px] tracking-wide text-[#FC6224]">
-          {error}
-        </p>
-      ) : null}
     </article>
   )
 }
