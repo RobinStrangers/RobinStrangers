@@ -5,9 +5,9 @@
 :root {
   --primary: #fc6224;
   --base: #1c1c1c;
-  --ground-background: 34%;
-  --ground-main: 26%;
-  --ground-foreground: 16%;
+  --ground-background: 20%;
+  --ground-main: 9%;
+  --ground-foreground: 4%;
 }
 
 * {
@@ -1328,9 +1328,9 @@ body {
 /* RESPONSIVE */
 @media (max-width: 768px) {
   :root {
-    --ground-background: 56%;
-    --ground-main: 48%;
-    --ground-foreground: 40%;
+    --ground-background: 22%;
+    --ground-main: 17%;
+    --ground-foreground: 15%;
   }
 
   .ui-shell {

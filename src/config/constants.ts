@@ -14,35 +14,36 @@ export const PARALLAX = {
 export const SPRITE = {
   FRAME_COUNT: 8,
   SHEET_FRAMES: 8,
-  FPS: 8,
-  CYCLE_MS: 1000,
+  FPS: 12,
+  CYCLE_MS: 680,
 } as const
 
 export const MOVEMENT = {
   ENTER: -18,
   EXIT: 118,
+  TRAVEL: 1.65,
 } as const
 
 export const DEPTH = {
   background: {
-    scale: 0.36,
-    speedScale: 0.42,
-    ground: '36%',
-    mobileGround: '56%',
+    scale: 0.16,
+    speedScale: 0.72,
+    ground: '20%',
+    mobileGround: '22%',
     z: 20,
   },
   main: {
-    scale: 0.56,
+    scale: 0.22,
     speedScale: 1,
-    ground: '25%',
-    mobileGround: '48%',
+    ground: '9%',
+    mobileGround: '17%',
     z: 30,
   },
   foreground: {
-    scale: 0.74,
-    speedScale: 1.45,
-    ground: '15%',
-    mobileGround: '40%',
+    scale: 0.3,
+    speedScale: 1.15,
+    ground: '4%',
+    mobileGround: '15%',
     z: 40,
   },
 } as const

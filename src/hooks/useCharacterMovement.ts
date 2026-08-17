@@ -91,11 +91,18 @@ export function useCharacterMovement({
       let nextDirection = dirRef.current
 
       if (walking) {
-        x += nextDirection * speed * depthSpeed * motionScale * dt * (100 / Math.max(window.innerWidth, 1)) * 1.15
+        x +=
+          nextDirection *
+          speed *
+          depthSpeed *
+          motionScale *
+          dt *
+          (100 / Math.max(window.innerWidth, 1)) *
+          MOVEMENT.TRAVEL
 
         if (!reduced && now > nextPauseRef.current && x > 18 && x < 82) {
-          pauseUntilRef.current = now + 400 + Math.random() * 700
-          nextPauseRef.current = pauseUntilRef.current + 2200 + Math.random() * 3600
+          pauseUntilRef.current = now + 160 + Math.random() * 220
+          nextPauseRef.current = pauseUntilRef.current + 5200 + Math.random() * 4800
         }
       }
 

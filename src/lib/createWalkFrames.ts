@@ -480,33 +480,35 @@ type Bounds = ReturnType<typeof contentBounds>
 
 type EyeBox = { minX: number; minY: number; maxX: number; maxY: number }
 
+const PIXEL = 10
+
 const CHARACTER_EYES: Record<string, { left: EyeBox; right: EyeBox }> = {
   character_0014: {
-    left: { minX: 120, minY: 140, maxX: 139, maxY: 160 },
+    left: { minX: 120, minY: 140, maxX: 139, maxY: 169 },
     right: { minX: 170, minY: 150, maxX: 199, maxY: 159 },
   },
   character_0016: {
-    left: { minX: 110, minY: 130, maxX: 153, maxY: 158 },
-    right: { minX: 167, minY: 130, maxX: 219, maxY: 158 },
+    left: { minX: 110, minY: 130, maxX: 159, maxY: 159 },
+    right: { minX: 170, minY: 130, maxX: 219, maxY: 159 },
   },
   character_0018: {
-    left: { minX: 120, minY: 140, maxX: 149, maxY: 156 },
-    right: { minX: 170, minY: 140, maxX: 199, maxY: 156 },
+    left: { minX: 120, minY: 140, maxX: 139, maxY: 169 },
+    right: { minX: 180, minY: 140, maxX: 199, maxY: 169 },
   },
   character_0022: {
-    left: { minX: 100, minY: 140, maxX: 139, maxY: 164 },
-    right: { minX: 165, minY: 140, maxX: 199, maxY: 164 },
+    left: { minX: 100, minY: 140, maxX: 139, maxY: 169 },
+    right: { minX: 160, minY: 140, maxX: 199, maxY: 169 },
   },
   character_0023: {
-    left: { minX: 120, minY: 140, maxX: 139, maxY: 160 },
+    left: { minX: 120, minY: 140, maxX: 139, maxY: 169 },
     right: { minX: 170, minY: 150, maxX: 199, maxY: 159 },
   },
   character_0024: {
-    left: { minX: 110, minY: 140, maxX: 139, maxY: 158 },
-    right: { minX: 170, minY: 140, maxX: 199, maxY: 158 },
+    left: { minX: 110, minY: 140, maxX: 139, maxY: 159 },
+    right: { minX: 170, minY: 140, maxX: 199, maxY: 159 },
   },
   character_0026: {
-    left: { minX: 120, minY: 140, maxX: 139, maxY: 160 },
+    left: { minX: 120, minY: 140, maxX: 139, maxY: 169 },
     right: { minX: 170, minY: 150, maxX: 199, maxY: 159 },
   },
 }
@@ -561,104 +563,116 @@ function sampleSkin(source: HTMLCanvasElement, bounds: Bounds): string {
   return `rgb(${Math.round(r / count)}, ${Math.round(g / count)}, ${Math.round(b / count)})`
 }
 
-function boxFromPixels(pixels: Array<{ x: number; y: number }>, fallback: EyeBox): EyeBox {
-  if (!pixels.length) return fallback
-  let minX = pixels[0].x
-  let minY = pixels[0].y
-  let maxX = pixels[0].x
-  let maxY = pixels[0].y
-  for (const pixel of pixels) {
-    if (pixel.x < minX) minX = pixel.x
-    if (pixel.y < minY) minY = pixel.y
-    if (pixel.x > maxX) maxX = pixel.x
-    if (pixel.y > maxY) maxY = pixel.y
+function snapPixel(value: number) {
+  return Math.round(value / PIXEL) * PIXEL
+}
+
+function boxFromCells(cells: Array<{ x: number; y: number }>, fallback: EyeBox): EyeBox {
+  if (!cells.length) return fallback
+  let minX = cells[0].x
+  let minY = cells[0].y
+  let maxX = cells[0].x + PIXEL - 1
+  let maxY = cells[0].y + PIXEL - 1
+  for (const cell of cells) {
+    if (cell.x < minX) minX = cell.x
+    if (cell.y < minY) minY = cell.y
+    if (cell.x + PIXEL - 1 > maxX) maxX = cell.x + PIXEL - 1
+    if (cell.y + PIXEL - 1 > maxY) maxY = cell.y + PIXEL - 1
   }
   return { minX, minY, maxX, maxY }
+}
+
+function isBlushTone(r: number, g: number, b: number) {
+  return r > 200 && g > 50 && g < 160 && b < 170 && r - g > 50
+}
+
+function cellMajority(
+  data: Uint8ClampedArray,
+  width: number,
+  height: number,
+  cx: number,
+  cy: number,
+): { r: number; g: number; b: number; a: number } | null {
+  let r = 0
+  let g = 0
+  let b = 0
+  let a = 0
+  let count = 0
+  const x1 = Math.min(width - 1, cx + PIXEL - 1)
+  const y1 = Math.min(height - 1, cy + PIXEL - 1)
+  for (let y = cy; y <= y1; y += 1) {
+    for (let x = cx; x <= x1; x += 1) {
+      const p = (y * width + x) * 4
+      if (data[p + 3] < 40) continue
+      r += data[p]
+      g += data[p + 1]
+      b += data[p + 2]
+      a += data[p + 3]
+      count += 1
+    }
+  }
+  if (!count) return null
+  return {
+    r: Math.round(r / count),
+    g: Math.round(g / count),
+    b: Math.round(b / count),
+    a: Math.round(a / count),
+  }
 }
 
 function findEyes(source: HTMLCanvasElement, bounds: Bounds): EyeBox[] {
   const ctx = source.getContext('2d', { willReadFrequently: true })
   if (!ctx) return []
   const { data, width } = ctx.getImageData(0, 0, source.width, source.height)
-  const headH = Math.max(1, bounds.maxY - bounds.minY)
-  const headW = Math.max(1, bounds.maxX - bounds.minX)
-  const y0 = Math.round(bounds.minY + headH * 0.36)
-  const y1 = Math.round(bounds.minY + headH * 0.62)
-  const x0 = Math.round(bounds.minX + headW * 0.14)
-  const x1 = Math.round(bounds.maxX - headW * 0.14)
-  const midX = Math.round((bounds.minX + bounds.maxX) / 2)
+  const midX = snapPixel((bounds.minX + bounds.maxX) / 2)
+  const x0 = snapPixel(bounds.minX + PIXEL * 2)
+  const x1 = snapPixel(bounds.maxX - PIXEL * 3)
+  const y0 = 130
+  const y1 = 160
+  const leftCells: Array<{ x: number; y: number }> = []
+  const rightCells: Array<{ x: number; y: number }> = []
 
-  let eyeRow = Math.round((y0 + y1) / 2)
-  let bestCount = 0
-  for (let y = y0; y <= y1; y += 1) {
-    let count = 0
-    for (let x = x0; x <= x1; x += 1) {
-      const p = (y * width + x) * 4
-      if (data[p + 3] < 40) continue
-      if (isEyeLike(data[p], data[p + 1], data[p + 2])) count += 1
-    }
-    if (count > bestCount) {
-      bestCount = count
-      eyeRow = y
-    }
-  }
-
-  const band = Math.max(8, Math.round(headH * 0.08))
-  const bandTop = Math.max(y0, eyeRow - band)
-  const bandBot = Math.min(y1, eyeRow + band)
-  const inset = Math.round(headW * 0.06)
-  const leftPixels: Array<{ x: number; y: number }> = []
-  const rightPixels: Array<{ x: number; y: number }> = []
-
-  for (let y = bandTop; y <= bandBot; y += 1) {
-    for (let x = x0 + inset; x <= x1 - inset; x += 1) {
-      const p = (y * width + x) * 4
-      if (data[p + 3] < 40) continue
-      if (!isEyeLike(data[p], data[p + 1], data[p + 2])) continue
-      if (x < midX - 2) leftPixels.push({ x, y })
-      else if (x > midX + 2) rightPixels.push({ x, y })
+  for (let y = y0; y <= y1; y += PIXEL) {
+    for (let x = x0; x <= x1; x += PIXEL) {
+      const cell = cellMajority(data, width, source.height, x, y)
+      if (!cell || cell.a < 40) continue
+      if (isSkinTone(cell.r, cell.g, cell.b)) continue
+      const blush = isBlushTone(cell.r, cell.g, cell.b)
+      const outer = x <= bounds.minX + PIXEL * 5 || x >= bounds.maxX - PIXEL * 6
+      if (blush && (y >= 160 || outer)) continue
+      if (!isEyeLike(cell.r, cell.g, cell.b) && !blush) continue
+      if (x + PIXEL / 2 < midX) leftCells.push({ x, y })
+      else if (x >= midX) rightCells.push({ x, y })
     }
   }
 
-  const eyeH = Math.max(8, Math.round(headH * 0.08))
   const leftFallback: EyeBox = {
-    minX: midX - Math.round(headW * 0.28),
-    maxX: midX - Math.round(headW * 0.1),
-    minY: eyeRow - Math.round(eyeH / 2),
-    maxY: eyeRow + Math.round(eyeH / 2),
+    minX: midX - PIXEL * 4,
+    maxX: midX - PIXEL * 2 - 1,
+    minY: 140,
+    maxY: 169,
   }
   const rightFallback: EyeBox = {
-    minX: midX + Math.round(headW * 0.1),
-    maxX: midX + Math.round(headW * 0.28),
-    minY: eyeRow - Math.round(eyeH / 2),
-    maxY: eyeRow + Math.round(eyeH / 2),
+    minX: midX + PIXEL * 2,
+    maxX: midX + PIXEL * 4 - 1,
+    minY: 140,
+    maxY: 169,
   }
 
-  const left = boxFromPixels(leftPixels, leftFallback)
-  const right = boxFromPixels(rightPixels, rightFallback)
-  if (left.maxX - left.minX < 4) Object.assign(left, leftFallback)
-  if (right.maxX - right.minX < 4) Object.assign(right, rightFallback)
-  if (left.maxY - left.minY < 3) {
-    left.minY = eyeRow - 4
-    left.maxY = eyeRow + 4
-  }
-  if (right.maxY - right.minY < 3) {
-    right.minY = eyeRow - 4
-    right.maxY = eyeRow + 4
-  }
-
-  return [left, right]
+  return [boxFromCells(leftCells, leftFallback), boxFromCells(rightCells, rightFallback)]
 }
 
 function applyBlink(ctx: CanvasRenderingContext2D, eyes: EyeBox[], skin: string) {
   for (const eye of eyes) {
-    const w = Math.max(6, eye.maxX - eye.minX + 1)
-    const h = Math.max(6, eye.maxY - eye.minY + 1)
-    const y = eye.minY
+    const x = snapPixel(eye.minX)
+    const y = snapPixel(eye.minY)
+    const w = Math.max(PIXEL, snapPixel(eye.maxX - eye.minX + 1))
+    const h = Math.max(PIXEL, snapPixel(eye.maxY - eye.minY + 1))
     ctx.fillStyle = skin
-    ctx.fillRect(eye.minX, y, w, h)
+    ctx.fillRect(x, y, w, h)
+    const lidY = y + snapPixel((h - PIXEL) / 2)
     ctx.fillStyle = '#141414'
-    ctx.fillRect(eye.minX, y + Math.round(h / 2) - 2, w, 4)
+    ctx.fillRect(x, lidY, w, PIXEL)
   }
 }
 
@@ -709,10 +723,10 @@ function makeFaceRig(
     frames: {
       center: drawFace(0, false),
       blink: drawFace(0, true),
-      left: drawFace(-8, false),
-      right: drawFace(8, false),
-      leftBlink: drawFace(-8, true),
-      rightBlink: drawFace(8, true),
+      left: drawFace(-PIXEL, false),
+      right: drawFace(PIXEL, false),
+      leftBlink: drawFace(-PIXEL, true),
+      rightBlink: drawFace(PIXEL, true),
     },
     width: frameW,
     height,

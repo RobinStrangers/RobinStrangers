@@ -6,10 +6,10 @@ import { preloadStrangerAssets } from '../../lib/preloadImages'
 
 const WORD = 'STRANGERS'
 const WALKERS = [
-  { src: STRANGER_IMAGE_LIST[1], delay: '0.1s', duration: '2.7s', bottom: '20%', scale: 0.34, dir: 1 },
-  { src: STRANGER_IMAGE_LIST[3], delay: '0.7s', duration: '2.55s', bottom: '16%', scale: 0.4, dir: -1 },
-  { src: STRANGER_IMAGE_LIST[6], delay: '1.2s', duration: '2.85s', bottom: '25%', scale: 0.28, dir: 1 },
-  { src: STRANGER_IMAGE_LIST[0], delay: '1.8s', duration: '2.45s', bottom: '14%', scale: 0.46, dir: 1 },
+  { src: STRANGER_IMAGE_LIST[1], delay: '0.1s', duration: '2.15s', bottom: '10%', scale: 0.2, dir: 1 },
+  { src: STRANGER_IMAGE_LIST[3], delay: '0.7s', duration: '2s', bottom: '6%', scale: 0.24, dir: -1 },
+  { src: STRANGER_IMAGE_LIST[6], delay: '1.2s', duration: '2.25s', bottom: '14%', scale: 0.16, dir: 1 },
+  { src: STRANGER_IMAGE_LIST[0], delay: '1.8s', duration: '1.9s', bottom: '4%', scale: 0.28, dir: 1 },
 ]
 
 type SiteLoaderProps = {
